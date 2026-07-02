@@ -79,15 +79,6 @@ bash setup.sh
 
 > ⚠️ Always set billing alerts and clean up resources after labs!
 
-## 🤝 OSS Contribution: Service Screener v2
-
-This project includes proposed contributions to [aws-samples/service-screener-v2](https://github.com/aws-samples/service-screener-v2):
-
-- **AWS Backup checks** — vault lock, cross-region copy, backup plan frequency
-- **AWS DRS checks** — replication health, lag monitoring, PIT retention
-- **ARC checks** — routing controls, zonal shift readiness, practice runs
-
-See [oss-contribution/](oss-contribution/) for implementation details.
 
 ## 📂 Repository Structure
 
