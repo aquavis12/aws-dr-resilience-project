@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# AWS credentials (NEVER commit)
+*.pem
+credentials
+.aws/
+
+# Terraform state
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Build outputs
+*.zip
+output/

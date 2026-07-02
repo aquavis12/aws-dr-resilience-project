@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS DR Decision Framework & Comparison Matrix</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --navy: #1B2838;
+            --teal-dark: #0D7377;
+            --teal: #14A098;
+            --teal-light: #1ABC9C;
+            --white: #FFFFFF;
+            --gray-50: #F8FAFC;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-300: #CBD5E1;
+            --gray-600: #475569;
+            --gray-800: #1E293B;
+            --green: #10B981;
+            --green-bg: #D1FAE5;
+            --yellow: #F59E0B;
+            --yellow-bg: #FEF3C7;
+            --orange: #F97316;
+            --orange-bg: #FFEDD5;
+            --red: #EF4444;
+            --red-bg: #FEE2E2;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--navy) 0%, #2D3E50 100%);
+            color: var(--white);
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(20, 160, 152, 0.1) 0%, transparent 60%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.85;
+            position: relative;
+        }
+        .header .badge-row {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            position: relative;
+        }
+        .badge {
+            background: rgba(20, 160, 152, 0.25);
+            border: 1px solid rgba(20, 160, 152, 0.5);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Navigation */
+        .nav {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0.75rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        .nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .nav a {
+            color: var(--gray-600);
+            text-decoration: none;
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav a:hover {
+            background: var(--teal);
+            color: var(--white);
+        }
+
+        /* Sections */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        section {
+            margin-bottom: 3rem;
+        }
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .section-title .icon {
+            width: 36px;
+            height: 36px;
+            background: var(--teal);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+        .section-subtitle {
+            color: var(--gray-600);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Strategy Comparison Table */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+            font-size: 0.9rem;
+        }
+        thead {
+            background: var(--navy);
+            color: var(--white);
+        }
+        th {
+            padding: 1rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        td {
+            padding: 0.85rem 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) {
+            background: var(--gray-50);
+        }
+        tbody tr:hover {
+            background: rgba(20, 160, 152, 0.05);
+        }
+        .cost-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .cost-1 { background: var(--green-bg); color: #065F46; }
+        .cost-2 { background: var(--yellow-bg); color: #92400E; }
+        .cost-3 { background: var(--orange-bg); color: #9A3412; }
+        .cost-4 { background: var(--red-bg); color: #991B1B; }
+
+        .rto-rpo {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        /* Service-Strategy Mapping */
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .mapping-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--teal);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .mapping-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        .mapping-card h3 {
+            color: var(--navy);
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        .mapping-card .role {
+            color: var(--teal-dark);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
+        .mapping-card .strategies {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .strategy-tag {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .strategy-tag.primary {
+            background: rgba(20, 160, 152, 0.15);
+            color: var(--teal-dark);
+            border: 1px solid rgba(20, 160, 152, 0.3);
+        }
+
+        /* Decision Tree */
+        .decision-tree {
+            padding: 2rem;
+        }
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+        .tree-node {
+            background: var(--white);
+            border: 2px solid var(--teal);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            text-align: center;
+            max-width: 350px;
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+        .tree-node.question {
+            background: var(--navy);
+            color: var(--white);
+            border-color: var(--navy);
+        }
+        .tree-node.question h4 {
+            font-size: 0.95rem;
+        }
+        .tree-connector {
+            width: 2px;
+            height: 30px;
+            background: var(--teal);
+        }
+        .tree-branches {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 0;
+        }
+        .tree-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .branch-connector {
+            width: 2px;
+            height: 20px;
+            background: var(--gray-300);
+        }
+        .branch-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            padding: 0.3rem 0.6rem;
+            background: var(--gray-100);
+            border-radius: 4px;
+            margin: 0.3rem 0;
+        }
+        .tree-result {
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            width: 100%;
+            box-shadow: var(--shadow);
+        }
+        .tree-result.r1 { background: var(--green-bg); color: #065F46; border: 2px solid var(--green); }
+        .tree-result.r2 { background: var(--yellow-bg); color: #92400E; border: 2px solid var(--yellow); }
+        .tree-result.r3 { background: var(--orange-bg); color: #9A3412; border: 2px solid var(--orange); }
+        .tree-result.r4 { background: var(--red-bg); color: #991B1B; border: 2px solid var(--red); }
+        .tree-result .strategy-name { font-size: 1rem; margin-bottom: 0.25rem; }
+        .tree-result .strategy-detail { font-size: 0.75rem; font-weight: 400; opacity: 0.8; }
+
+        /* Horizontal connector bar */
+        .h-connector {
+            width: 80%;
+            height: 2px;
+            background: var(--gray-300);
+            margin: 0.5rem auto;
+            position: relative;
+        }
+        .h-connector::before, .h-connector::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 20px;
+            background: var(--gray-300);
+        }
+        .h-connector::before { left: 0; }
+        .h-connector::after { right: 0; }
+
+        /* Cost Grid */
+        .cost-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .cost-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .cost-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        .cost-card.tier-1::before { background: var(--green); }
+        .cost-card.tier-2::before { background: var(--yellow); }
+        .cost-card.tier-3::before { background: var(--orange); }
+        .cost-card.tier-4::before { background: var(--red); }
+        .cost-card h4 {
+            color: var(--navy);
+            margin-bottom: 0.25rem;
+        }
+        .cost-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+        .cost-card.tier-1 .cost-amount { color: var(--green); }
+        .cost-card.tier-2 .cost-amount { color: var(--yellow); }
+        .cost-card.tier-3 .cost-amount { color: var(--orange); }
+        .cost-card.tier-4 .cost-amount { color: var(--red); }
+        .cost-card .includes {
+            font-size: 0.8rem;
+            color: var(--gray-600);
+            line-height: 1.8;
+        }
+        .cost-card .includes li {
+            list-style: none;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+        .cost-card .includes li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--teal);
+            font-weight: bold;
+        }
+
+        /* Quick Reference */
+        .ref-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .ref-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border-top: 4px solid var(--teal);
+        }
+        .ref-card .service-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+        }
+        .ref-card h3 {
+            color: var(--navy);
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        .ref-card .tagline {
+            color: var(--teal-dark);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .ref-card .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+        .metric {
+            background: var(--gray-50);
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .metric .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--gray-600);
+            font-weight: 600;
+        }
+        .metric .value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--navy);
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        .footer a {
+            color: var(--teal-light);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.75rem; }
+            .tree-branches { grid-template-columns: 1fr 1fr; }
+            .container { padding: 1rem; }
+            th, td { padding: 0.5rem; font-size: 0.8rem; }
+        }
+
+        /* Interactive Decision Tool */
+        .interactive-tool {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--gray-200);
+        }
+        .question-step {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .question-step.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .question-step h3 {
+            color: var(--navy);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .option-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+        .option-btn {
+            padding: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            background: var(--white);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .option-btn:hover {
+            border-color: var(--teal);
+            background: rgba(20, 160, 152, 0.05);
+            transform: translateY(-1px);
+        }
+        .option-btn .opt-title {
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.25rem;
+        }
+        .option-btn .opt-desc {
+            font-size: 0.8rem;
+            color: var(--gray-600);
+        }
+        .result-panel {
+            display: none;
+            background: linear-gradient(135deg, var(--navy), #2D3E50);
+            color: var(--white);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            animation: fadeIn 0.4s ease;
+        }
+        .result-panel.active { display: block; }
+        .result-panel h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .result-panel .rec-strategy {
+            color: var(--teal-light);
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+        .result-panel .rec-details {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            max-width: 500px;
+            margin: 0.5rem auto;
+            line-height: 1.6;
+        }
+        .reset-btn {
+            margin-top: 1.5rem;
+            padding: 0.6rem 1.5rem;
+            border: 2px solid var(--teal-light);
+            background: transparent;
+            color: var(--teal-light);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover {
+            background: var(--teal-light);
+            color: var(--navy);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h1>☁️ AWS DR Decision Framework</h1>
+    <p>Disaster Recovery & Resilience — Strategy Comparison & Service Selection Guide</p>
+    <div class="badge-row">
+        <span class="badge">Resilience Hub</span>
+        <span class="badge">Application Recovery Controller</span>
+        <span class="badge">Elastic Disaster Recovery</span>
+        <span class="badge">AWS Backup</span>
+    </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+    <div class="nav-inner">
+        <a href="#comparison">📊 Strategy Matrix</a>
+        <a href="#mapping">🔗 Service Mapping</a>
+        <a href="#decision">🌳 Decision Tree</a>
+        <a href="#interactive">🎯 Interactive Tool</a>
+        <a href="#costs">💰 Cost Grid</a>
+        <a href="#reference">📋 Quick Reference</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Section 1: Strategy Comparison Matrix -->
+    <section id="comparison">
+        <div class="section-title">
+            <div class="icon">📊</div>
+            Strategy Comparison Matrix
+        </div>
+        <p class="section-subtitle">Four DR strategies ranked from lowest cost/slowest recovery to highest cost/fastest recovery</p>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>RTO</th>
+                        <th>RPO</th>
+                        <th>Cost</th>
+                        <th>Complexity</th>
+                        <th>DR Region State</th>
+                        <th>Best For</th>
+                        <th>Key AWS Services</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Backup & Restore</strong></td>
+                        <td class="rto-rpo">< 24 hours</td>
+                        <td class="rto-rpo">Hours</td>
+                        <td><span class="cost-badge cost-1">$ Low</span></td>
+                        <td>Low</td>
+                        <td>No running resources — only backup storage</td>
+                        <td>Non-critical workloads, dev/test, tight budgets</td>
+                        <td>AWS Backup, S3 CRR, CloudFormation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pilot Light</strong></td>
+                        <td class="rto-rpo">Tens of min</td>
+                        <td class="rto-rpo">Minutes</td>
+                        <td><span class="cost-badge cost-2">$$ Medium</span></td>
+                        <td>Medium</td>
+                        <td>Core data tier running (DB replicas); compute off</td>
+                        <td>Business-critical apps where tens-of-min RTO is OK</td>
+                        <td>AWS DRS, RDS Read Replicas, AMIs</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Warm Standby</strong></td>
+                        <td class="rto-rpo">Minutes</td>
+                        <td class="rto-rpo">Seconds–Min</td>
+                        <td><span class="cost-badge cost-3">$$$ High</span></td>
+                        <td>Medium-High</td>
+                        <td>Scaled-down full stack running & serving read traffic</td>
+                        <td>Mission-critical apps needing single-digit-minute recovery</td>
+                        <td>AWS DRS, ARC, Aurora Global DB, ASG</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Active-Active</strong></td>
+                        <td class="rto-rpo">Near zero</td>
+                        <td class="rto-rpo">Near zero</td>
+                        <td><span class="cost-badge cost-4">$$$$ Highest</span></td>
+                        <td>High</td>
+                        <td>Full production in 2+ Regions; all serve traffic</td>
+                        <td>Zero-downtime requirements, global apps, financial systems</td>
+                        <td>ARC, DynamoDB Global Tables, Global Accelerator</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Section 2: Service-to-Strategy Mapping -->
+    <section id="mapping">
+        <div class="section-title">
+            <div class="icon">🔗</div>
+            Service-to-Strategy Mapping
+        </div>
+        <p class="section-subtitle">Which AWS services are primary or supporting for each DR strategy</p>
+
+        <div class="mapping-grid">
+            <div class="mapping-card">
+                <h3>AWS Backup</h3>
+                <div class="role">Data Protection & Compliance</div>
+                <p style="font-size:0.85rem; color:var(--gray-600); margin-bottom:0.75rem;">Centralized policy-based backup across 20+ services. Cross-region/cross-account copies. Vault Lock for WORM compliance.</p>
+                <div class="strategies">
+                    <span class="strategy-tag primary">Backup & Restore ★</span>
+                    <span class="strategy-tag">Pilot Light</span>
+                    <span class="strategy-tag">Warm Standby</span>
+                    <span class="strategy-tag">Active-Active</span>
+                </div>
+            </div>
+            <div class="mapping-card">
+                <h3>AWS Elastic Disaster Recovery (DRS)</h3>
+                <div class="role">Server Replication & Recovery</div>
+                <p style="font-size:0.85rem; color:var(--gray-600); margin-bottom:0.75rem;">Continuous block-level replication with sub-second RPO. Automated failover/failback. Point-in-time recovery.</p>
+                <div class="strategies">
+                    <span class="strategy-tag primary">Pilot Light ★</span>
+                    <span class="strategy-tag primary">Warm Standby ★</span>
+                    <span class="strategy-tag">Active-Active</span>
+                </div>
+            </div>
+            <div class="mapping-card">
+                <h3>Amazon Application Recovery Controller (ARC)</h3>
+                <div class="role">Failover Orchestration & Traffic Management</div>
+                <p style="font-size:0.85rem; color:var(--gray-600); margin-bottom:0.75rem;">Routing controls, zonal shift/autoshift, Region switch. Safety rules prevent accidental failover errors.</p>
+                <div class="strategies">
+                    <span class="strategy-tag">Pilot Light</span>
+                    <span class="strategy-tag primary">Warm Standby ★</span>
+                    <span class="strategy-tag primary">Active-Active ★</span>
+                </div>
+            </div>
+            <div class="mapping-card">
+                <h3>AWS Resilience Hub</h3>
+                <div class="role">Assessment & Governance (All Strategies)</div>
+                <p style="font-size:0.85rem; color:var(--gray-600); margin-bottom:0.75rem;">AI-powered failure mode analysis, RTO/RPO validation, drift detection. Applies to all strategies as the governance layer.</p>
+                <div class="strategies">
+                    <span class="strategy-tag primary">Backup & Restore ★</span>
+                    <span class="strategy-tag primary">Pilot Light ★</span>
+                    <span class="strategy-tag primary">Warm Standby ★</span>
+                    <span class="strategy-tag primary">Active-Active ★</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Decision Tree -->
+    <section id="decision">
+        <div class="section-title">
+            <div class="icon">🌳</div>
+            Decision Tree
+        </div>
+        <p class="section-subtitle">Follow the decision path based on your acceptable downtime and budget</p>
+
+        <div class="card decision-tree">
+            <div class="tree-container">
+                <!-- Root Question -->
+                <div class="tree-node question">
+                    <h4>❓ What is your acceptable downtime (RTO)?</h4>
+                </div>
+                <div class="tree-connector"></div>
+                
+                <!-- Horizontal spread -->
+                <div class="h-connector"></div>
+                
+                <!-- Branches -->
+                <div class="tree-branches">
+                    <div class="tree-branch">
+                        <div class="branch-connector"></div>
+                        <div class="branch-label">Hours (< 24h)</div>
+                        <div class="branch-connector"></div>
+                        <div class="tree-result r1">
+                            <div class="strategy-name">📦 Backup & Restore</div>
+                            <div class="strategy-detail">Budget: $50–200/mo<br>Use: AWS Backup + S3 CRR</div>
+                        </div>
+                    </div>
+                    <div class="tree-branch">
+                        <div class="branch-connector"></div>
+                        <div class="branch-label">Tens of Min</div>
+                        <div class="branch-connector"></div>
+                        <div class="tree-result r2">
+                            <div class="strategy-name">🔥 Pilot Light</div>
+                            <div class="strategy-detail">Budget: $200–800/mo<br>Use: DRS + RDS Replicas</div>
+                        </div>
+                    </div>
+                    <div class="tree-branch">
+                        <div class="branch-connector"></div>
+                        <div class="branch-label">Minutes</div>
+                        <div class="branch-connector"></div>
+                        <div class="tree-result r3">
+                            <div class="strategy-name">🌡️ Warm Standby</div>
+                            <div class="strategy-detail">Budget: $1K–5K/mo<br>Use: DRS + ARC + Aurora</div>
+                        </div>
+                    </div>
+                    <div class="tree-branch">
+                        <div class="branch-connector"></div>
+                        <div class="branch-label">Near Zero</div>
+                        <div class="branch-connector"></div>
+                        <div class="tree-result r4">
+                            <div class="strategy-name">⚡ Active-Active</div>
+                            <div class="strategy-detail">Budget: $5K–20K+/mo<br>Use: ARC + Global Tables</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:2rem; padding:1rem; background:var(--gray-50); border-radius:8px; font-size:0.85rem; color:var(--gray-600);">
+                <strong>Secondary Factors:</strong> 
+                🏦 Regulatory compliance (HIPAA/PCI may require Warm Standby+) &nbsp;|&nbsp;
+                💼 Business impact ($loss/hour of downtime) &nbsp;|&nbsp;
+                🛠️ Operational maturity (Active-Active needs skilled teams) &nbsp;|&nbsp;
+                🌍 Global user base (Active-Active for latency)
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3b: Interactive Decision Tool -->
+    <section id="interactive">
+        <div class="section-title">
+            <div class="icon">🎯</div>
+            Interactive Strategy Advisor
+        </div>
+        <p class="section-subtitle">Answer 3 questions to get a personalized DR strategy recommendation</p>
+
+        <div class="interactive-tool">
+            <!-- Step 1 -->
+            <div class="question-step active" id="step1">
+                <h3>1️⃣ What's your maximum acceptable downtime?</h3>
+                <div class="option-buttons">
+                    <div class="option-btn" onclick="answer(1, 'hours')">
+                        <div class="opt-title">Hours (< 24h)</div>
+                        <div class="opt-desc">We can tolerate extended downtime to rebuild</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(1, 'tens-min')">
+                        <div class="opt-title">Tens of Minutes</div>
+                        <div class="opt-desc">Need recovery within 30-60 minutes</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(1, 'minutes')">
+                        <div class="opt-title">Single-Digit Minutes</div>
+                        <div class="opt-desc">Must be back online in under 10 minutes</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(1, 'zero')">
+                        <div class="opt-title">Near Zero / Continuous</div>
+                        <div class="opt-desc">Cannot afford any noticeable interruption</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="question-step" id="step2">
+                <h3>2️⃣ What's your monthly DR infrastructure budget?</h3>
+                <div class="option-buttons">
+                    <div class="option-btn" onclick="answer(2, 'low')">
+                        <div class="opt-title">💲 Minimal ($50–200/mo)</div>
+                        <div class="opt-desc">Pay only for backup storage</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(2, 'medium')">
+                        <div class="opt-title">💲💲 Moderate ($200–800/mo)</div>
+                        <div class="opt-desc">Some always-on components acceptable</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(2, 'high')">
+                        <div class="opt-title">💲💲💲 Significant ($1K–5K/mo)</div>
+                        <div class="opt-desc">Scaled-down replica running continuously</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(2, 'unlimited')">
+                        <div class="opt-title">💲💲💲💲 Premium ($5K+/mo)</div>
+                        <div class="opt-desc">Full duplicate infrastructure is justified</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="question-step" id="step3">
+                <h3>3️⃣ What's your team's operational complexity tolerance?</h3>
+                <div class="option-buttons">
+                    <div class="option-btn" onclick="answer(3, 'low')">
+                        <div class="opt-title">Low — Keep it simple</div>
+                        <div class="opt-desc">Small team, prefer managed services with minimal ops</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(3, 'medium')">
+                        <div class="opt-title">Medium — Some automation</div>
+                        <div class="opt-desc">Can manage IaC, some DR runbooks, periodic testing</div>
+                    </div>
+                    <div class="option-btn" onclick="answer(3, 'high')">
+                        <div class="opt-title">High — Full DR engineering</div>
+                        <div class="opt-desc">Dedicated SRE team, automated failover, chaos testing</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result -->
+            <div class="result-panel" id="result">
+                <h3>🎯 Recommended Strategy</h3>
+                <div class="rec-strategy" id="rec-name"></div>
+                <div class="rec-details" id="rec-details"></div>
+                <button class="reset-btn" onclick="resetTool()">🔄 Start Over</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4: Cost Estimation Grid -->
+    <section id="costs">
+        <div class="section-title">
+            <div class="icon">💰</div>
+            Cost Estimation Grid
+        </div>
+        <p class="section-subtitle">Approximate monthly costs for a typical 3-tier application (web + app + database)</p>
+
+        <div class="cost-grid">
+            <div class="cost-card tier-1">
+                <h4>Backup & Restore</h4>
+                <div class="cost-amount">~$50–200/mo</div>
+                <ul class="includes">
+                    <li>S3 backup storage (cross-region)</li>
+                    <li>EBS snapshot storage</li>
+                    <li>AWS Backup service (no charge)</li>
+                    <li>IaC templates (no charge)</li>
+                    <li>No running compute in DR region</li>
+                </ul>
+            </div>
+            <div class="cost-card tier-2">
+                <h4>Pilot Light</h4>
+                <div class="cost-amount">~$200–800/mo</div>
+                <ul class="includes">
+                    <li>DRS replication ($0.028/server/hr)</li>
+                    <li>Staging area EBS volumes</li>
+                    <li>RDS Cross-Region Read Replica</li>
+                    <li>AMI/snapshot storage</li>
+                    <li>Compute ON DEMAND only during DR</li>
+                </ul>
+            </div>
+            <div class="cost-card tier-3">
+                <h4>Warm Standby</h4>
+                <div class="cost-amount">~$1,000–5,000/mo</div>
+                <ul class="includes">
+                    <li>Scaled-down EC2 fleet (always running)</li>
+                    <li>Aurora Global Database replica</li>
+                    <li>ARC cluster ($2.50/hr = ~$1,800/mo)</li>
+                    <li>Load balancer in DR region</li>
+                    <li>DRS for non-DB servers</li>
+                </ul>
+            </div>
+            <div class="cost-card tier-4">
+                <h4>Active-Active (Multi-Site)</h4>
+                <div class="cost-amount">~$5,000–20,000+/mo</div>
+                <ul class="includes">
+                    <li>Full compute fleet in 2+ Regions</li>
+                    <li>DynamoDB Global Tables / Aurora Global</li>
+                    <li>ARC + Global Accelerator</li>
+                    <li>Dual ALBs + Auto Scaling Groups</li>
+                    <li>~2× production costs</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="margin-top:1.5rem; padding:1rem; background:var(--white); border-radius:8px; border:1px solid var(--gray-200); font-size:0.85rem; color:var(--gray-600);">
+            ⚠️ <strong>Note:</strong> Costs are illustrative estimates for a mid-size 3-tier app. Actual costs depend on data volume, instance sizes, transfer, and region pricing. Always use the <a href="https://calculator.aws/" target="_blank" style="color:var(--teal-dark)">AWS Pricing Calculator</a> for accurate estimates.
+        </div>
+    </section>
+
+    <!-- Section 5: Quick Reference Cards -->
+    <section id="reference">
+        <div class="section-title">
+            <div class="icon">📋</div>
+            Quick Reference Cards
+        </div>
+        <p class="section-subtitle">At-a-glance specs for each AWS resilience service</p>
+
+        <div class="ref-grid">
+            <div class="ref-card">
+                <div class="service-icon">🛡️</div>
+                <h3>AWS Resilience Hub</h3>
+                <div class="tagline">Assessment & Governance</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="label">Pricing</div>
+                        <div class="value">$15/service/mo</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Add-On</div>
+                        <div class="value">$10/svc/mo (deps)</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Key Feature</div>
+                        <div class="value">AI Failure Analysis</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Launched</div>
+                        <div class="value">Next-Gen May 2026</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ref-card">
+                <div class="service-icon">🔀</div>
+                <h3>Application Recovery Controller</h3>
+                <div class="tagline">Failover Orchestration</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="label">Zonal Shift</div>
+                        <div class="value">Free</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Cluster</div>
+                        <div class="value">$2.50/hr</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Region Switch</div>
+                        <div class="value">$70/plan/mo</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Availability</div>
+                        <div class="value">5-Region cluster</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ref-card">
+                <div class="service-icon">🔄</div>
+                <h3>Elastic Disaster Recovery</h3>
+                <div class="tagline">Server Replication & Recovery</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="label">Pricing</div>
+                        <div class="value">$0.028/srv/hr</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">RPO</div>
+                        <div class="value">Sub-second</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">RTO</div>
+                        <div class="value">5–20 minutes</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Sources</div>
+                        <div class="value">On-prem + Cloud</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ref-card">
+                <div class="service-icon">💾</div>
+                <h3>AWS Backup</h3>
+                <div class="tagline">Centralized Data Protection</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="label">Pricing</div>
+                        <div class="value">~$0.05/GB-mo</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Services</div>
+                        <div class="value">20+ supported</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Key Feature</div>
+                        <div class="value">Vault Lock (WORM)</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Scope</div>
+                        <div class="value">Cross-region/acct</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+    <p>AWS Disaster Recovery & Resilience Decision Framework | Built for project reference</p>
+    <p style="margin-top:0.5rem;">Sources: <a href="https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html">AWS DR Whitepaper</a> |
+    <a href="https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_planning_for_recovery_disaster_recovery.html">Well-Architected REL13-BP02</a> |
+    <a href="https://aws.amazon.com/resilience/">AWS Cloud Resilience</a></p>
+</div>
+
+<script>
+    // Interactive Decision Tool Logic
+    let answers = {};
+
+    function answer(step, value) {
+        answers[step] = value;
+        document.getElementById('step' + step).classList.remove('active');
+        
+        if (step < 3) {
+            document.getElementById('step' + (step + 1)).classList.add('active');
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        const rto = answers[1];
+        const budget = answers[2];
+        const complexity = answers[3];
+
+        let strategy, details;
+
+        if (rto === 'zero' || (rto === 'minutes' && budget === 'unlimited')) {
+            strategy = '⚡ Active-Active (Multi-Site)';
+            details = 'Deploy full production stacks in 2+ Regions. Use ARC routing controls for traffic management, DynamoDB Global Tables or Aurora Global DB for data, and Global Accelerator for latency-based routing. Requires mature SRE practices and chaos testing.';
+        } else if (rto === 'minutes' || (rto === 'tens-min' && budget === 'high')) {
+            strategy = '🌡️ Warm Standby';
+            details = 'Run a scaled-down but fully functional replica in the DR Region. Use AWS DRS for server replication, Aurora Global Database for data tier, and ARC for automated failover orchestration. Scale up to full capacity during disaster.';
+        } else if (rto === 'tens-min' || (rto === 'hours' && budget === 'medium' && complexity !== 'low')) {
+            strategy = '🔥 Pilot Light';
+            details = 'Keep core data layer (RDS replicas) running continuously in DR Region. Use AWS DRS for server-level replication. Application/compute servers are pre-configured but only launched during failover. Balance of cost and recovery speed.';
+        } else {
+            strategy = '📦 Backup & Restore';
+            details = 'Use AWS Backup for centralized, policy-driven backups with cross-region copies. Store IaC templates (CloudFormation/CDK) ready for deployment. On disaster: deploy infrastructure from IaC, restore data from backups. Cheapest but slowest.';
+        }
+
+        document.getElementById('rec-name').textContent = strategy;
+        document.getElementById('rec-details').textContent = details;
+        document.getElementById('result').classList.add('active');
+    }
+
+    function resetTool() {
+        answers = {};
+        document.getElementById('result').classList.remove('active');
+        document.querySelectorAll('.question-step').forEach(el => el.classList.remove('active'));
+        document.getElementById('step1').classList.add('active');
+    }
+</script>
+
+</body>
+</html>
